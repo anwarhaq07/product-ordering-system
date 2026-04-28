@@ -21,6 +21,16 @@ def init_db():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS orders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_name TEXT NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity_kg REAL NOT NULL,
+        status TEXT DEFAULT 'PENDING'
+    )
+    """)
+
+
     conn.commit()
     conn.close()
-    

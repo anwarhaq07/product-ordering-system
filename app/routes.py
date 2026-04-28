@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 from app.database import get_connection
+from app.service import get_all_products, create_order
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -9,10 +11,27 @@ def home():
 
 @router.get("/products")
 def get_products():
+    return get_all_products()
+
+class OrderRequest(BaseModel):
+    customer_name: str
+    product_id: int
+    quantity_kg: float
+
+@router.post("/orders")
+def create_order_api(order: OrderRequest):
+    return create_order(
+        order.customer_name,
+        order.product_id,
+        order.quantity_kg
+    )
+
+@router.get("/orders")
+def get_orders():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM products")
+    cursor.execute("SELECT * FROM orders")
     rows = cursor.fetchall()
 
     conn.close()
