@@ -31,14 +31,7 @@ def create_order(customer_name, product_id, quantity_kg):
             status_code = 404,
             detail = "Product not found"
         )
-
-    # Validate stock
-    if product["stock_kg"] < quantity_kg:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Only {product['stock_kg']}kg available"
-        )
-
+        
     conn = get_connection()
 
     try:
@@ -64,9 +57,18 @@ def create_order(customer_name, product_id, quantity_kg):
                 UPDATE products
                 SET stock_kg = stock_kg - ?
                 WHERE id = ?
+                AND stock_kg >= ?
                 """,
-                (quantity_kg, product_id)
+                (quantity_kg, product_id, quantity_kg)
             )
+            
+            #rowcount tells how many rows were updated
+            if cursor.rowcount == 0:
+
+                raise HTTPException(
+                    status_code=400,
+                    detail="Insufficient stock"
+                )
 
     except Exception as e:
         raise HTTPException(
