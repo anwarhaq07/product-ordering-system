@@ -40,28 +40,42 @@ def create_order(customer_name, product_id, quantity_kg):
         )
 
     conn = get_connection()
-    cursor = conn.cursor()
 
-    # Insert order into database
-    cursor.execute(
-        """INSERT INTO orders
-        (customer_name, product_id, quantity_kg) 
-        VALUES (?, ?, ?)
-        """,
-        (customer_name, product_id, quantity_kg)
-    )
+    try:
 
-    # Reduce stock
-    cursor.execute(
-        """
-        UPDATE products
-        SET stock_kg = stock_kg - ?
-        WHERE id = ?
-        """,
-        (quantity_kg, product_id)
-    )
-    conn.commit()
-    conn.close()
+        # Transaction starts here
+        with conn:
+
+            cursor = conn.cursor()
+
+            # Create order
+            cursor.execute(
+                """
+                INSERT INTO orders
+                (customer_name, product_id, quantity_kg)
+                VALUES (?, ?, ?)
+                """,
+                (customer_name, product_id, quantity_kg)
+            )
+
+            # Reduce Inventory
+            cursor.execute(
+                """
+                UPDATE products
+                SET stock_kg = stock_kg - ?
+                WHERE id = ?
+                """,
+                (quantity_kg, product_id)
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Transaction failed: {str(e)}"
+        )
+    
+    finally:
+        conn.close()
 
     return {
         "message": "Order created successfully",
