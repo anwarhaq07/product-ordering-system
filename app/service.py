@@ -85,6 +85,68 @@ def create_order(customer_name, product_id, quantity_kg):
         "remaining_stock": product["stock_kg"] - quantity_kg
     }
 
+# Cancel an order and restore inventory
+def cancel_order(order_id):
+    conn = get_connection()
+
+    try:
+        with conn:
+            cursor = conn.cursor()
+
+            # Fetch Order
+            cursor.execute("""
+                           SELECT * FROM orders
+                           WHERE id = ?
+                           """,
+                           (order_id,)
+                           )
+            order = cursor.fetchone()
+
+            # Validate Order
+            if not order:
+                raise HTTTPException(
+                    status_code=404,
+                    detail="Order not found"
+                )
+            
+            # Prevent Double Cancellation
+            if order["status"] == "CANCELLED":
+                raise HTTPException(
+                    status_code=400,
+                    detail="Order already cancelled"
+                )
+            
+            # Restore inventory
+            cursor.execute(
+                """
+                Update products
+                SET stock_kg = stock_kg + ?
+                WHERE id = ?
+                """,
+                (order["quantity_kg"], order["product_id"])
+            )
+
+            # Update order status
+            cursor.execute(
+                """
+                UPDATE orders
+                SET status = 'CANCELLED'
+                WHERE id =?
+                """,
+                (order_id,)
+            )
+            return {
+                "message" : "Order cancelled successfully"
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Cancellation failed: {str(e)}"
+        )
+    finally:
+        conn.close()
 def get_product_by_id(product_id):
     conn = get_connection()
     cursor = conn.cursor()

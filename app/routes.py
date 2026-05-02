@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.database import get_connection
-from app.service import get_all_products, create_order
+from app.service import get_all_products, create_order, cancel_order
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -37,3 +37,7 @@ def get_orders():
     conn.close()
 
     return [dict(row) for row in rows]
+
+@router.post("/orders/{order_id}/cancel")
+def cancel_order_api(order_id: int):
+    return cancel_order(order_id)
