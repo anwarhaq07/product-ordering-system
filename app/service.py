@@ -1,5 +1,6 @@
 from app.database import get_connection
 from fastapi import HTTPException
+from state_machine import can_transition
 
 def get_all_products():
     conn = get_connection()
@@ -69,6 +70,8 @@ def create_order(customer_name, product_id, quantity_kg):
                     status_code=400,
                     detail="Insufficient stock"
                 )
+    except HTTPException:
+        raise
 
     except Exception as e:
         raise HTTPException(
@@ -81,6 +84,7 @@ def create_order(customer_name, product_id, quantity_kg):
 
     return {
         "message": "Order created successfully",
+        "order_id": cursor.lastrowid,
         "product": product["name"],
         "remaining_stock": product["stock_kg"] - quantity_kg
     }
@@ -90,62 +94,58 @@ def cancel_order(order_id):
     conn = get_connection()
 
     try:
-        with conn:
-            cursor = conn.cursor()
+        cursor = conn.cursor()
 
-            # Fetch Order
-            cursor.execute("""
-                           SELECT * FROM orders
-                           WHERE id = ?
-                           """,
-                           (order_id,)
-                           )
-            order = cursor.fetchone()
+        cursor.execute("PRAGMA foreign_keys=ON")
 
-            # Validate Order
-            if not order:
-                raise HTTTPException(
-                    status_code=404,
-                    detail="Order not found"
-                )
-            
-            # Prevent Double Cancellation
-            ALLOWED_CANCEL_STATES = ["PENDING", "CONFIRMED"]
+        cursor.execute("""
+            SELECT * FROM orders
+            WHERE id = ?
+        """, (order_id,))
 
-            if order["status"] not in ALLOWED_CANCEL_STATES:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Order cannot be cancelled in current state"
-                )
-            # Restore inventory
-            cursor.execute(
-                """
-                Update products
-                SET stock_kg = stock_kg + ?
-                WHERE id = ?
-                """,
-                (order["quantity_kg"], order["product_id"])
+        order = cursor.fetchone()
+
+        if not order:
+            raise HTTPException(
+                status_code=404,
+                detail="Order not found"
             )
 
-            # Update order status
-            cursor.execute(
-                """
-                UPDATE orders
-                SET status = 'CANCELLED'
-                WHERE id =?
-                """,
-                (order_id,)
+        if not can_transition(order["status"], "CANCELLED"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot cancel order in {order['status']} state"
             )
-            return {
-                "message" : "Order cancelled successfully"
-            }
+
+        cursor.execute("""
+            UPDATE products
+            SET stock_kg = stock_kg + ?
+            WHERE id = ?
+        """, (order["quantity_kg"], order["product_id"]))
+
+        cursor.execute("""
+            UPDATE orders
+            SET status = 'CANCELLED'
+            WHERE id = ?
+        """, (order_id,))
+
+        conn.commit()
+
+        print("CANCEL SUCCESS:", order["status"])
+
+        return {
+            "message": "Order cancelled successfully"
+        }
+
     except HTTPException:
         raise
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Cancellation failed: {str(e)}"
         )
+
     finally:
         conn.close()
 
@@ -192,10 +192,10 @@ def confirm_order(order_id):
                 )
 
             #Validate state transition
-            if order["status"] != "PENDING":
+            if not can_transition(order['status'], "CONFIRMED"):
                 raise HTTPException(
                     status_code=400,
-                    detail="Only pending orders can be confirmed"
+                    detail=f"Cannot confirm order in {order['status']} state"
                 )
             
             #Update status
@@ -253,10 +253,10 @@ def deliver_order(order_id):
                 )
             
             #Validate State Transition
-            if order["status"] != "CONFIRMED":
+            if not can_transition(order["status"], "DELIVERED"):
                 raise HTTPException(
                     status_code=400,
-                    detail="Only confirmed orders can be delivered"
+                    detail=f"Cannot deliver order in {order['status']} state"
                 )
             
             #Update status
