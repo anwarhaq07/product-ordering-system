@@ -110,12 +110,13 @@ def cancel_order(order_id):
                 )
             
             # Prevent Double Cancellation
-            if order["status"] == "CANCELLED":
+            ALLOWED_CANCEL_STATES = ["PENDING", "CONFIRMED"]
+
+            if order["status"] not in ALLOWED_CANCEL_STATES:
                 raise HTTPException(
                     status_code=400,
-                    detail="Order already cancelled"
+                    detail="Order cannot be cancelled in current state"
                 )
-            
             # Restore inventory
             cursor.execute(
                 """
@@ -147,6 +148,8 @@ def cancel_order(order_id):
         )
     finally:
         conn.close()
+
+#Fetch product ID
 def get_product_by_id(product_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -162,3 +165,122 @@ def get_product_by_id(product_id):
     if row:
         return dict(row)
     return None
+
+#Confirm Order
+def confirm_order(order_id):
+    conn = get_connection()
+
+    try:
+        with conn:
+            cursor = conn.cursor()
+
+            #Fetch order
+            cursor.execute(
+                """
+                SELECT * FROM orders
+                WHERE id = ?
+                """,
+                (order_id,)
+            )
+            order = cursor.fetchone()
+
+            #Validate Orders
+            if not order:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Order not found"
+                )
+
+            #Validate state transition
+            if order["status"] != "PENDING":
+                raise HTTPException(
+                    status_code=400,
+                    detail="Only pending orders can be confirmed"
+                )
+            
+            #Update status
+            cursor.execute(
+                """
+                UPDATE orders
+                SET status = 'CONFIRMED'
+                WHERE id = ?
+                """,
+                (order_id,)
+            )
+
+        return {
+            "message": "Order confirmed successfully"
+        }
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"COnfirmation failed:{str(e)}"
+        )
+    
+    finally:
+        conn.close()
+
+    
+#Mark order as delivered
+def deliver_order(order_id):
+
+    conn = get_connection()
+
+    try:
+        with conn:
+
+            cursor = conn.cursor()
+
+            #Fetch order
+            cursor.execute(
+                """
+                SELECT * FROM orders
+                WHERE id = ?
+                """,
+                (order_id,)
+            )
+
+            order = cursor.fetchone()
+
+            #Validate order
+            if not order:
+                raise HTTPException(
+                    status_code=4-4,
+                    detail="Order not found"
+                )
+            
+            #Validate State Transition
+            if order["status"] != "CONFIRMED":
+                raise HTTPException(
+                    status_code=400,
+                    detail="Only confirmed orders can be delivered"
+                )
+            
+            #Update status
+            cursor.execute(
+                """
+                UPDATE orders
+                SET status = 'DELIVERED'
+                WHERE id = ?
+                """,
+                (order_id,)
+            )
+
+            return{
+                "message": "Order delivered successfully"
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Delivery Failed: {str(e)}"
+        )
+    
+    finally:
+        conn.close()
+              
+
