@@ -42,6 +42,23 @@ def create_order(customer_name, product_id, quantity_kg):
 
             cursor = conn.cursor()
 
+            cursor.execute(
+                """
+                UPDATE products
+                SET stock_kg = stock_kg - ?
+                WHERE id = ?
+                AND stock_kg >= ?
+                """,
+                (quantity_kg, product_id, quantity_kg))
+
+            # Reduce Inventory
+            if cursor.rowcount == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Insufficient stock"
+                )
+            
+            
             # Create order
             cursor.execute(
                 """
@@ -52,24 +69,6 @@ def create_order(customer_name, product_id, quantity_kg):
                 (customer_name, product_id, quantity_kg)
             )
 
-            # Reduce Inventory
-            cursor.execute(
-                """
-                UPDATE products
-                SET stock_kg = stock_kg - ?
-                WHERE id = ?
-                AND stock_kg >= ?
-                """,
-                (quantity_kg, product_id, quantity_kg)
-            )
-            
-            #rowcount tells how many rows were updated
-            if cursor.rowcount == 0:
-
-                raise HTTPException(
-                    status_code=400,
-                    detail="Insufficient stock"
-                )
     except HTTPException:
         raise
 

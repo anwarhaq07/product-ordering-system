@@ -1,13 +1,16 @@
 import sqlite3
+import os
 from pathlib import Path
 
 # Get absolute path to project root database
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR/"meat.db"
+
+DB_NAME = "test.db" if os.getenv("TESTING") else "meat.db"
 
 # Create database connection
 def get_connection():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DB_NAME, check_same_thread=False)
 
     # Enable dictionary -like row access
     conn.row_factory = sqlite3.Row
