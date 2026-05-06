@@ -1,6 +1,7 @@
 from app.database import get_connection
 from fastapi import HTTPException
 from state_machine import can_transition
+import json
 
 def get_all_products():
     conn = get_connection()
@@ -15,7 +16,7 @@ def get_all_products():
 
 # Create customer order after validating business rules.
 # Update inventory automatically.
-def create_order(customer_name, product_id, quantity_kg):
+def create_order(customer_name, product_id, quantity_kg, idempotency_key=None):
     
     # Validate quantity
     if quantity_kg <= 0:
@@ -36,11 +37,20 @@ def create_order(customer_name, product_id, quantity_kg):
     conn = get_connection()
 
     try:
+        cursor = conn.cursor()
+
+        if idempotency_key:
+            cursor.execute("""
+            SELECT response FROM idempotency_keys
+            WHERE key = ?
+            """, (idempotency_key,))
+            existing = cursor.fetchone()
+                
+            if existing:
+                return json.loads(existing["response"])
 
         # Transaction starts here
         with conn:
-
-            cursor = conn.cursor()
 
             cursor.execute(
                 """
@@ -57,8 +67,7 @@ def create_order(customer_name, product_id, quantity_kg):
                     status_code=400,
                     detail="Insufficient stock"
                 )
-            
-            
+         
             # Create order
             cursor.execute(
                 """
@@ -68,6 +77,20 @@ def create_order(customer_name, product_id, quantity_kg):
                 """,
                 (customer_name, product_id, quantity_kg)
             )
+            order_id = cursor.lastrowid
+            response_data = {
+                "message": "Order created successfully",
+                "order_id": order_id,
+                "product": product["name"]
+            }
+
+            if idempotency_key:
+                    cursor.execute("""
+                    INSERT INTO idempotency_keys (key, response)
+                    VALUES (?, ?)
+                    """, (idempotency_key, json.dumps(response_data)))
+
+        return response_data
 
     except HTTPException:
         raise
@@ -80,14 +103,7 @@ def create_order(customer_name, product_id, quantity_kg):
     
     finally:
         conn.close()
-
-    return {
-        "message": "Order created successfully",
-        "order_id": cursor.lastrowid,
-        "product": product["name"],
-        "remaining_stock": product["stock_kg"] - quantity_kg
-    }
-
+        
 # Cancel an order and restore inventory
 def cancel_order(order_id):
     conn = get_connection()

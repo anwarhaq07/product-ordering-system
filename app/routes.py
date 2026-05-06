@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from app.database import get_connection
 from app.service import get_all_products, create_order, cancel_order, confirm_order, deliver_order
 from pydantic import BaseModel
@@ -19,11 +19,14 @@ class OrderRequest(BaseModel):
     quantity_kg: float
 
 @router.post("/orders")
-def create_order_api(order: OrderRequest):
+def create_order_api(order: OrderRequest,
+                     idempotency_key: str | None = Header(default=None)):
+    
     return create_order(
         order.customer_name,
         order.product_id,
-        order.quantity_kg
+        order.quantity_kg,
+        idempotency_key=idempotency_key
     )
 
 @router.get("/orders")

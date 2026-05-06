@@ -127,3 +127,24 @@ def test_concurrent_orders(client):
         #Only one should succeed
         assert results.count(200) == 1
         assert results.count(400) == 1
+
+def test_idempotent_concurrent(client):
+    headers = {"Idempotency-key":"same-key"}
+
+    results = []
+
+    def place():
+        r = client.post("/orders", json={
+            "customer_name": "Test",
+            "product_id": 1,
+            "quantity_kg": 2
+        }, headers = headers)
+        results.append(r.json())
+
+        t1 = threading.Thread(target=place)
+        t2 = threading.Thread(target=place)
+
+        t1.start(); t2.start()
+        t1.join();t2.join()
+
+        assert results[0] == results[1]

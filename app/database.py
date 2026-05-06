@@ -40,6 +40,13 @@ def init_db():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS idempotency_keys(
+        key TEXT PRIMARY KEY,
+        response TEXT
+    )                             
+    """)
+
 
     conn.commit()
     conn.close()
