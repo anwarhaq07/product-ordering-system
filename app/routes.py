@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Header, Depends
 from app.database import get_connection
 from app.service import get_all_products, create_order, cancel_order, confirm_order, deliver_order, create_user,login_user
 from pydantic import BaseModel
+from app.auth import get_current_user,require_admin
 
 router = APIRouter()
 
@@ -19,14 +20,17 @@ class OrderRequest(BaseModel):
     quantity_kg: float
 
 @router.post("/orders")
-def create_order_api(order: OrderRequest,
-                     idempotency_key: str | None = Header(default=None)):
+def create_order_api(
+    order: OrderRequest,
+    current_user: dict = Depends(get_current_user),
+    idempotency_key: str | None = Header(default=None)):
     
     return create_order(
         order.customer_name,
         order.product_id,
         order.quantity_kg,
-        idempotency_key=idempotency_key
+        idempotency_key=idempotency_key,
+        username=current_user["username"]
     )
 
 @router.get("/orders")
@@ -42,15 +46,18 @@ def get_orders():
     return [dict(row) for row in rows]
 
 @router.post("/orders/{order_id}/cancel")
-def cancel_order_api(order_id: int):
-    return cancel_order(order_id)
+def cancel_order_api(order_id: int, current_user: dict = Depends(get_current_user)):
+    return cancel_order(order_id, current_user["username"])
 
-@router.post("/prders/{order_id}/conifrm")
-def confirm_order_api(order_id: int):
+@router.post("/orders/{order_id}/conifrm")
+def confirm_order_api(order_id: int, current_user: dict = Depends(get_current_user)):
+    
+    require_admin(current_user)
     return confirm_order(order_id)
 
 @router.post("/orders/{order_id}/deliver")
-def deliver_order_api(order_id: int):
+def deliver_order_api(order_id: int, current_user: dict = Depends(get_current_user)):
+    require_admin(current_user)
     return deliver_order(order_id)
 
 

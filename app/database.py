@@ -36,7 +36,9 @@ def init_db():
         customer_name TEXT NOT NULL,
         product_id INTEGER NOT NULL,
         quantity_kg REAL NOT NULL,
-        status TEXT DEFAULT 'PENDING'
+        status TEXT DEFAULT 'PENDING',
+        user_id INTEGER,
+        FOREIGN KEY(user_id) REFERENCES users(id) 
     )
     """)
 

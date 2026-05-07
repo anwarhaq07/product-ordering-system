@@ -17,7 +17,7 @@ def get_all_products():
 
 # Create customer order after validating business rules.
 # Update inventory automatically.
-def create_order(customer_name, product_id, quantity_kg, idempotency_key=None):
+def create_order(customer_name, product_id, quantity_kg, username, idempotency_key=None):
     
     # Validate quantity
     if quantity_kg <= 0:
@@ -49,6 +49,19 @@ def create_order(customer_name, product_id, quantity_kg, idempotency_key=None):
                 
             if existing:
                 return json.loads(existing["response"])
+        
+        cursor.execute("""
+        SELECT id FROM users
+        WHERE username = ?    
+        """, (username,))
+
+        user = cursor.fetchone()
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            ) 
 
         # Transaction starts here
         with conn:
@@ -73,10 +86,10 @@ def create_order(customer_name, product_id, quantity_kg, idempotency_key=None):
             cursor.execute(
                 """
                 INSERT INTO orders
-                (customer_name, product_id, quantity_kg)
-                VALUES (?, ?, ?)
+                (customer_name, product_id, quantity_kg, user_id)
+                VALUES (?, ?, ?, ?)
                 """,
-                (customer_name, product_id, quantity_kg)
+                (customer_name, product_id, quantity_kg, user["id"])
             )
             order_id = cursor.lastrowid
             response_data = {
@@ -106,13 +119,26 @@ def create_order(customer_name, product_id, quantity_kg, idempotency_key=None):
         conn.close()
 
 # Cancel an order and restore inventory
-def cancel_order(order_id):
+def cancel_order(order_id, username):
     conn = get_connection()
 
     try:
         cursor = conn.cursor()
 
         cursor.execute("PRAGMA foreign_keys=ON")
+
+        cursor.execute("""
+        SELECT orders.*, users.username
+        FROM orders
+        JOIN users ON orders.user_id = users.id
+        WHERE orders.id = ?
+        """, (order_id, ))
+
+        if order["username"] != username:
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to cancel this order"
+            )
 
         cursor.execute("""
             SELECT * FROM orders
