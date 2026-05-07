@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Header
 from app.database import get_connection
-from app.service import get_all_products, create_order, cancel_order, confirm_order, deliver_order
+from app.service import get_all_products, create_order, cancel_order, confirm_order, deliver_order, create_user,login_user
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -52,3 +52,27 @@ def confirm_order_api(order_id: int):
 @router.post("/orders/{order_id}/deliver")
 def deliver_order_api(order_id: int):
     return deliver_order(order_id)
+
+
+class UserRequest(BaseModel):
+    username: str
+    password: str
+
+@router.post("/register")
+def register_user(user: UserRequest):
+
+    return create_user(
+        user.username,
+        user.password
+    )
+
+class LoginRequest(BaseModel):
+    username : str
+    password: str
+
+@router.post("/login")
+def login_api(user: LoginRequest):
+    return login_user(
+        user.username,
+        user.password
+    )

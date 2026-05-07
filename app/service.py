@@ -2,6 +2,7 @@ from app.database import get_connection
 from fastapi import HTTPException
 from state_machine import can_transition
 import json
+from app.auth import hash_password, create_access_token, verify_password
 
 def get_all_products():
     conn = get_connection()
@@ -103,7 +104,7 @@ def create_order(customer_name, product_id, quantity_kg, idempotency_key=None):
     
     finally:
         conn.close()
-        
+
 # Cancel an order and restore inventory
 def cancel_order(order_id):
     conn = get_connection()
@@ -299,3 +300,83 @@ def deliver_order(order_id):
         conn.close()
               
 
+def create_user(username, password):
+
+    conn = get_connection()
+
+    try:
+        with conn:
+            cursor = conn.cursor()
+
+            # Check existing user
+            cursor.execute("""
+                SELECT id FROM users
+                WHERE username = ?
+                """, (username,))
+            
+            existing = cursor.fetchone()
+
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Username already exists"
+                )
+            
+            # Hash password
+            password_hash = hash_password(password)
+
+            # Create User
+            cursor.execute("""
+                INSERT INTO users(username, password_hash)
+                VALUES (?,?)
+                """, (username, password_hash))
+            
+            return {
+                "message": "User created successfully"
+            }
+        
+    finally:
+        conn.close()
+
+def login_user(username, password):
+
+    conn = get_connection()
+
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT * FROM users
+            WHERE username = ?
+        """, (username,))
+
+        user = cursor.fetchone()
+
+        if not user:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid credentials"
+            )
+        
+        #Verify Password
+        if not verify_password(
+            password,
+            user["password_hash"]
+        ):
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid credentials"
+            )
+        
+        #Generate token
+        token = create_access_token({
+            "sub": user["username"],
+            "role": user["role"]
+        })
+
+        return {
+            "access_token": token,
+            "token_type": "bearer"
+        }
+    finally:
+        conn.close()
