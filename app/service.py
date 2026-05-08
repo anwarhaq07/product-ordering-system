@@ -134,6 +134,8 @@ def cancel_order(order_id, username):
         WHERE orders.id = ?
         """, (order_id, ))
 
+        order = cursor.fetchone()
+
         if order["username"] != username:
             raise HTTPException(
                 status_code=403,
@@ -144,8 +146,6 @@ def cancel_order(order_id, username):
             SELECT * FROM orders
             WHERE id = ?
         """, (order_id,))
-
-        order = cursor.fetchone()
 
         if not order:
             raise HTTPException(

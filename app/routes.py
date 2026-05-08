@@ -3,6 +3,7 @@ from app.database import get_connection
 from app.service import get_all_products, create_order, cancel_order, confirm_order, deliver_order, create_user,login_user
 from pydantic import BaseModel
 from app.auth import get_current_user,require_admin
+from fastapi.security import OAuth2PasswordRequestForm
 
 router = APIRouter()
 
@@ -78,8 +79,8 @@ class LoginRequest(BaseModel):
     password: str
 
 @router.post("/login")
-def login_api(user: LoginRequest):
-    return login_user(
-        user.username,
-        user.password
+def login_api(form_data: OAuth2PasswordRequestForm = Depends()):
+    return login_user(  
+        form_data.username,
+        form_data.password
     )

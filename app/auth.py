@@ -45,7 +45,7 @@ def create_access_token(data: dict):
 
     return encoded_jwt
 
-def require_admin(current_user: dict):
+def require_admin(current_user):
 
     if current_user["role"] != "admin":
         raise HTTPException(
