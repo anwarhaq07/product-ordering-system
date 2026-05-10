@@ -35,6 +35,7 @@ def get_connection():
         check_same_thread=False
     )
     print("DB FILE:", get_db_name())
+    print("ABS PATH:", os.path.abspath("test.db"))
 
     # Enables row["column"] access
     conn.row_factory = sqlite3.Row
@@ -48,6 +49,8 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     print("DB FILE:", get_db_name())
+    print("ABS PATH:", os.path.abspath("test.db"))
+    print("CREATING TABLES IN:", get_connection())
     # IMPORTANT: USERS FIRST (FK dependency)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users(
@@ -63,6 +66,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         price_per_kg REAL NOT NULL,
+        stock_kg REAL NOT NULL DEFAULT 0,
         available INTEGER DEFAULT 1
     )
     """)
@@ -85,14 +89,6 @@ def init_db():
         response TEXT
     )
     """)
-
-    # -----------------------------
-    # SEED DATA (CRITICAL FOR TESTS)
-    # -----------------------------
-    cursor.execute("""
-    INSERT OR IGNORE INTO products (id, name, price_per_kg, available)
-    VALUES (1, 'Lamb', 10.0, 1)
-    """)
-
+    
     conn.commit()
     conn.close()

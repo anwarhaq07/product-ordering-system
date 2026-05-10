@@ -64,17 +64,23 @@ def test_create_order_success(client):
     },
     headers = auth_headers(token)
     )
-
+    print(response.status_code)
+    print(response.json())
     assert response.status_code == 200
 
 def test_stock_reduction_after_order(client):
 
+    register_user(client, "user1", "pass123")
+
+    token = login_user(client, "user1", "pass123")
     #create order
     response = client.post("/orders", json={
-        "customer_name": "Test User",
+        "customer_name": "user1",
         "product_id": 1,
         "quantity_kg": 2
-    })
+    },
+    headers = auth_headers(token)
+    )
 
     assert response.status_code == 200
 
@@ -88,29 +94,41 @@ def test_stock_reduction_after_order(client):
 
 def test_cannot_oversell(client):
 
+    register_user(client, "user1", "pass123")
+
+    token = login_user(client, "user1", "pass123")    
+
     #Try ordering huge quantity
     response = client.post("/orders", json={
-        "customer_name": "Test User",
+        "customer_name": "user1",
         "product_id" : 1,
         "quantity_kg": 10000
-    })
+    }, 
+    headers=auth_headers(token)
+    
+    )
 
     assert response.status_code == 400
 
 
 def test_cancel_restores_stock(client):
 
+    register_user(client, "user1", "pass123")
+
+    token = login_user(client, "user1", "pass123")
     #Create order
     response = client.post("/orders", json={
         "customer_name": "Test User",
         "product_id":1,
         "quantity_kg": 2
-    })
+    },
+    headers=auth_headers(token)
+    )
 
     order_id = response.json()["order_id"]
 
     #cancel order
-    cancel = client.post(f"/orders/{order_id}/cancel")
+    cancel = client.post(f"/orders/{order_id}/cancel", headers=auth_headers(token))
     assert cancel.status_code == 200
 
     #verify stock restored
@@ -121,12 +139,17 @@ def test_cancel_restores_stock(client):
 
 def test_cannot_cancel_delivered_order(client):
 
+    register_user(client, "user1", "pass123")
+
+    token = login_user(client, "user1", "pass123")
     # Create order
     response = client.post("/orders", json={
         "customer_name": "Test User",
         "product_id": 1,
         "quantity_kg": 1
-    })
+    },
+    headers=auth_headers(token)
+    )
 
     order_id = response.json()["order_id"]
 
@@ -143,17 +166,23 @@ def test_cannot_cancel_delivered_order(client):
 
 def test_cannot_cancel_twice(client):
 
+    register_user(client, "user1", "pass123")
+
+    token = login_user(client, "user1", "pass123")
+
     response = client.post("/orders", json={
         "customer_name": "Test User",
         "product_id": 1,
         "quantity_kg": 1
-    })
+    },
+    headers=auth_headers(token)
+    )
 
     order_id = response.json()["order_id"]
 
-    client.post(f"/orders/{order_id}/cancel")
+    client.post(f"/orders/{order_id}/cancel", headers=auth_headers(token))
 
-    second = client.post(f"/orders/{order_id}/cancel")
+    second = client.post(f"/orders/{order_id}/cancel", headers=auth_headers(token))
 
     assert second.status_code == 400
 

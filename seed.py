@@ -2,20 +2,33 @@ from app.database import get_connection, init_db
 
 init_db()
 
-conn = get_connection()
-cursor = conn.cursor()
+def seed_db():
 
-cursor.execute(
-    "INSERT INTO products (name, price_per_kg, available) VALUES (?,?,?)",
-    ("Goat Meat", 10, 1000)
-)
+    conn = get_connection()
+    cursor = conn.cursor()
 
-cursor.execute(
-    "INSERT INTO products (name, price_per_kg, available) VALUES (?, ?, ?)",
-    ("Lamb Meat", 10, 500)
-)
+    cursor.execute(
+        """
+        INSERT INTO products
+        (name, price_per_kg, stock_kg, available)
+        VALUES (?, ?, ?, ?)
+        """,
+        ("Goat Meat", 10, 1000, 1000)
+    )
 
-conn.commit()
-conn.close()
+    cursor.execute(
+        """
+        INSERT INTO products
+        (name, price_per_kg, stock_kg, available)
+        VALUES (?, ?, ?, ?)
+        """,
+        ("Goat Meat", 10, 1000, 1000)
+    )
+    cursor.execute("SELECT * FROM products")
+    rows = cursor.fetchall()
 
-print("Seeded data")
+    for row in rows:
+        print(dict(row))
+
+    conn.commit()
+    conn.close()
