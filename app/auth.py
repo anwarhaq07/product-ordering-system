@@ -59,7 +59,6 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         status_code=401,
         detail="Invalid authentication credentials"
     )
-
     try:
         payload = jwt.decode(
             token,
@@ -69,7 +68,9 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
         username = payload.get("sub")
         role = payload .get("role")
-
+        print("USERNAME:", username)
+        print("ROLE:", role)
+        
         if username is None:
             raise credentials_exception
         

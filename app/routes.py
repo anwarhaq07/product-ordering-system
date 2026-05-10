@@ -2,7 +2,7 @@ from fastapi import APIRouter, Header, Depends
 from app.database import get_connection
 from app.service import get_all_products, create_order, cancel_order, confirm_order, deliver_order, create_user,login_user
 from pydantic import BaseModel
-from app.auth import get_current_user,require_admin
+from app.auth import get_current_user,require_admin,hash_password
 from fastapi.security import OAuth2PasswordRequestForm
 
 router = APIRouter()
@@ -26,13 +26,16 @@ def create_order_api(
     current_user: dict = Depends(get_current_user),
     idempotency_key: str | None = Header(default=None)):
     
-    return create_order(
+    result = create_order(
         order.customer_name,
         order.product_id,
         order.quantity_kg,
         idempotency_key=idempotency_key,
         username=current_user["username"]
     )
+    print("DEBUG RESPONSE FROM SERVICE:", result)
+
+    return result
 
 @router.get("/orders")
 def get_orders():
@@ -50,7 +53,7 @@ def get_orders():
 def cancel_order_api(order_id: int, current_user: dict = Depends(get_current_user)):
     return cancel_order(order_id, current_user["username"])
 
-@router.post("/orders/{order_id}/conifrm")
+@router.post("/orders/{order_id}/confirm")
 def confirm_order_api(order_id: int, current_user: dict = Depends(get_current_user)):
     
     require_admin(current_user)
@@ -65,13 +68,15 @@ def deliver_order_api(order_id: int, current_user: dict = Depends(get_current_us
 class UserRequest(BaseModel):
     username: str
     password: str
+    role: str = "customer"
 
 @router.post("/register")
 def register_user(user: UserRequest):
 
     return create_user(
         user.username,
-        user.password
+        user.password,
+        user.role
     )
 
 class LoginRequest(BaseModel):

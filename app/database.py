@@ -1,25 +1,62 @@
 import sqlite3
 import os
-from pathlib import Path
+import pytest
 
-# Get absolute path to project root database
-BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR/"meat.db"
+@pytest.fixture(scope="function")
+def client():
+    os.environ["TESTING"] = "1"
 
-DB_NAME = "test.db" if os.getenv("TESTING") else "meat.db"
+    # wipe test db
+    if os.path.exists("test.db"):
+        os.remove("test.db")
 
-# Create database connection
+    from app.database import init_db
+    init_db()
+
+    from app.main import app
+    from fastapi.testclient import TestClient
+
+    return TestClient(app)
+
+# -----------------------------
+# DB SELECTION (SAFE VERSION)
+# -----------------------------
+def get_db_name():
+    # IMPORTANT: evaluated at runtime, not import time
+    return "test.db" if os.getenv("TESTING") else "meat.db"
+
+
+# -----------------------------
+# DB CONNECTION
+# -----------------------------
 def get_connection():
-    conn = sqlite3.connect(DB_NAME, check_same_thread=False)
+    conn = sqlite3.connect(
+        get_db_name(),  # FIX: no hardcoded DB
+        check_same_thread=False
+    )
+    print("DB FILE:", get_db_name())
 
-    # Enable dictionary -like row access
+    # Enables row["column"] access
     conn.row_factory = sqlite3.Row
     return conn
 
 
+# -----------------------------
+# DATABASE INITIALIZATION
+# -----------------------------
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
+    print("DB FILE:", get_db_name())
+    # IMPORTANT: USERS FIRST (FK dependency)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT DEFAULT 'customer'
+    )
+    """)
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS products (
@@ -38,7 +75,7 @@ def init_db():
         quantity_kg REAL NOT NULL,
         status TEXT DEFAULT 'PENDING',
         user_id INTEGER,
-        FOREIGN KEY(user_id) REFERENCES users(id) 
+        FOREIGN KEY(user_id) REFERENCES users(id)
     )
     """)
 
@@ -46,16 +83,15 @@ def init_db():
     CREATE TABLE IF NOT EXISTS idempotency_keys(
         key TEXT PRIMARY KEY,
         response TEXT
-    )                             
+    )
     """)
 
+    # -----------------------------
+    # SEED DATA (CRITICAL FOR TESTS)
+    # -----------------------------
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        role TEXT DEFAULT 'customer'
-    )
+    INSERT OR IGNORE INTO products (id, name, price_per_kg, available)
+    VALUES (1, 'Lamb', 10.0, 1)
     """)
 
     conn.commit()

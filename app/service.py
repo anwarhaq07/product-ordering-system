@@ -46,9 +46,19 @@ def create_order(customer_name, product_id, quantity_kg, username, idempotency_k
             WHERE key = ?
             """, (idempotency_key,))
             existing = cursor.fetchone()
+
+            print("IDEMPOTENCY HIT:", existing)
                 
             if existing:
-                return json.loads(existing["response"])
+                cached = json.loads(existing["response"])
+            
+            if "order_id" not in cached:
+                raise HTTPException(
+                status_code=500,
+                detail="Corrupted idempotency cache"
+                )
+
+            return cached
         
         cursor.execute("""
         SELECT id FROM users
@@ -103,6 +113,8 @@ def create_order(customer_name, product_id, quantity_kg, username, idempotency_k
                     INSERT INTO idempotency_keys (key, response)
                     VALUES (?, ?)
                     """, (idempotency_key, json.dumps(response_data)))
+
+                    print("NEW RESPONSE CACHED:", response_data)
 
         return response_data
 
@@ -326,7 +338,7 @@ def deliver_order(order_id):
         conn.close()
               
 
-def create_user(username, password):
+def create_user(username, password, role):
 
     conn = get_connection()
 
@@ -350,12 +362,20 @@ def create_user(username, password):
             
             # Hash password
             password_hash = hash_password(password)
-
+            print("CREATING USER:", username, "ROLE:", role)
             # Create User
             cursor.execute("""
-                INSERT INTO users(username, password_hash)
-                VALUES (?,?)
-                """, (username, password_hash))
+                INSERT INTO users(username, password_hash, role)
+                VALUES (?, ?, ?)
+                """, (username, password_hash, role))
+            
+            cursor.execute("""
+                SELECT username, role
+                FROM users
+                WHERE username = ?
+                """, (username,))
+
+            print("DB USER:", dict(cursor.fetchone()))
             
             return {
                 "message": "User created successfully"
