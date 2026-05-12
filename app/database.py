@@ -1,6 +1,7 @@
 import sqlite3
 import os
 import pytest
+from pathlib import Path
 
 @pytest.fixture(scope="function")
 def client():
@@ -23,7 +24,7 @@ def client():
 # -----------------------------
 def get_db_name():
     # IMPORTANT: evaluated at runtime, not import time
-    return "test.db" if os.getenv("TESTING") else "meat.db"
+    return "test.db" if os.getenv("TESTING") else Path(__file__).resolve().parent/"meat.db"
 
 
 # -----------------------------
@@ -35,7 +36,8 @@ def get_connection():
         check_same_thread=False
     )
     print("DB FILE:", get_db_name())
-    print("ABS PATH:", os.path.abspath("test.db"))
+    print("CWD:", os.getcwd())
+    print("DB PATH:", os.path.abspath("meat.db"))
 
     # Enables row["column"] access
     conn.row_factory = sqlite3.Row
@@ -48,9 +50,6 @@ def get_connection():
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
-    print("DB FILE:", get_db_name())
-    print("ABS PATH:", os.path.abspath("test.db"))
-    print("CREATING TABLES IN:", get_connection())
     # IMPORTANT: USERS FIRST (FK dependency)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users(
@@ -89,6 +88,6 @@ def init_db():
         response TEXT
     )
     """)
-    
+
     conn.commit()
     conn.close()

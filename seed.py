@@ -1,6 +1,7 @@
 from app.database import get_connection, init_db
+import os
 
-init_db()
+#init_db()
 
 def seed_db():
 
@@ -13,7 +14,7 @@ def seed_db():
         (name, price_per_kg, stock_kg, available)
         VALUES (?, ?, ?, ?)
         """,
-        ("Goat Meat", 10, 1000, 1000)
+        ("Lamb Meat", 10, 1000, 1000)
     )
 
     cursor.execute(
@@ -25,10 +26,13 @@ def seed_db():
         ("Goat Meat", 10, 1000, 1000)
     )
     cursor.execute("SELECT * FROM products")
-    rows = cursor.fetchall()
 
-    for row in rows:
-        print(dict(row))
+    print("CWD:", os.getcwd())
+    print("DB PATH:", os.path.abspath("meat.db"))
+    # rows = cursor.fetchall()
+
+    # for row in rows:
+    #     print(dict(row))
 
     conn.commit()
     conn.close()

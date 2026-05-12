@@ -1,8 +1,9 @@
 from app.database import get_connection
 from fastapi import HTTPException
 from state_machine import can_transition
-import json
+import json,asyncio
 from app.auth import hash_password, create_access_token, verify_password
+from app.websocket_manager import manager
 
 def get_all_products():
     conn = get_connection()
@@ -108,6 +109,19 @@ def create_order(customer_name, product_id, quantity_kg, username, idempotency_k
                 "product": product["name"]
             }
 
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(manager.broadcast({
+                    "event": "ORDER_CREATED",
+                    "order_id": order_id,
+                    "product": product["name"],
+                    "quantity": quantity_kg
+                }))
+            except RuntimeError:
+                # fallback for sync context
+                pass
+
+
             if idempotency_key:
                     cursor.execute("""
                     INSERT INTO idempotency_keys (key, response)
@@ -184,6 +198,8 @@ def cancel_order(order_id, username):
         """, (order_id,))
 
         conn.commit()
+
+        
 
         print("CANCEL SUCCESS:", order["status"])
 
@@ -276,8 +292,7 @@ def confirm_order(order_id):
     
     finally:
         conn.close()
-
-    
+ 
 #Mark order as delivered
 def deliver_order(order_id):
 
