@@ -20,7 +20,5 @@ async def order_ws(websocket: WebSocket):
     except:
         manager.disconnect(websocket)
 
-
-
 app.include_router(router)
 

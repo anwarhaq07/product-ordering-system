@@ -1,9 +1,8 @@
 from app.database import get_connection
 from fastapi import HTTPException
 from state_machine import can_transition
-import json,asyncio
+import json
 from app.auth import hash_password, create_access_token, verify_password
-from app.websocket_manager import manager
 
 def get_all_products():
     conn = get_connection()
@@ -106,21 +105,11 @@ def create_order(customer_name, product_id, quantity_kg, username, idempotency_k
             response_data = {
                 "message": "Order created successfully",
                 "order_id": order_id,
-                "product": product["name"]
+                "product": product["name"],
+                "product_id": product_id,
+                "new_stock": product["stock_kg"] - quantity_kg,
+                "quantity": quantity_kg
             }
-
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(manager.broadcast({
-                    "event": "ORDER_CREATED",
-                    "order_id": order_id,
-                    "product": product["name"],
-                    "quantity": quantity_kg
-                }))
-            except RuntimeError:
-                # fallback for sync context
-                pass
-
 
             if idempotency_key:
                     cursor.execute("""
@@ -153,6 +142,7 @@ def cancel_order(order_id, username):
 
         cursor.execute("PRAGMA foreign_keys=ON")
 
+        #fetch order and owner
         cursor.execute("""
         SELECT orders.*, users.username
         FROM orders
@@ -162,6 +152,13 @@ def cancel_order(order_id, username):
 
         order = cursor.fetchone()
 
+        if not order:
+            raise HTTPException(
+                status_code=404,
+                detail="Order not found"
+            )
+
+        #Ownership check
         if order["username"] != username:
             raise HTTPException(
                 status_code=403,
@@ -173,39 +170,50 @@ def cancel_order(order_id, username):
             WHERE id = ?
         """, (order_id,))
 
-        if not order:
-            raise HTTPException(
-                status_code=404,
-                detail="Order not found"
-            )
 
+        #State Validation
         if not can_transition(order["status"], "CANCELLED"):
             raise HTTPException(
                 status_code=400,
                 detail=f"Cannot cancel order in {order['status']} state"
             )
 
+        #Restore stocks
         cursor.execute("""
             UPDATE products
             SET stock_kg = stock_kg + ?
             WHERE id = ?
         """, (order["quantity_kg"], order["product_id"]))
 
+        #Mark order cancelled
         cursor.execute("""
             UPDATE orders
             SET status = 'CANCELLED'
             WHERE id = ?
         """, (order_id,))
 
-        conn.commit()
+        #fetch Updated socks
+        cursor.execute("""
+            SELECT stock_kg
+            FROM products
+            WHERE id =?
+        """, (order["product_id"],))
 
-        
+        product = cursor.fetchone()
+        updated_stock = product["stock_kg"]
 
-        print("CANCEL SUCCESS:", order["status"])
-
-        return {
-            "message": "Order cancelled successfully"
+        cancel_event = {
+        "event": "ORDER_CANCELLED",
+        "order_id": order_id
         }
+
+        stock_event = {
+            "event": "STOCK_UPDATED",
+            "product_id": order["product_id"],
+            "new_stock": updated_stock
+        }
+
+        conn.commit()
 
     except HTTPException:
         raise
@@ -218,6 +226,14 @@ def cancel_order(order_id, username):
 
     finally:
         conn.close()
+    
+    return {
+        "message": "Order cancelled successfully",
+        "order_id": order_id,
+        "product_id": order["product_id"],
+        "new_stock": updated_stock
+    }
+
 
 #Fetch product ID
 def get_product_by_id(product_id):
