@@ -3,7 +3,7 @@ from app.websocket_manager import manager
 from app.database import get_connection
 from app.service import get_all_products, create_order, cancel_order, confirm_order, deliver_order, create_user,login_user
 from pydantic import BaseModel
-from app.auth import get_current_user,require_admin,hash_password
+from app.auth import get_current_user,require_admin
 from fastapi.security import OAuth2PasswordRequestForm
 
 router = APIRouter()
@@ -38,7 +38,9 @@ async def create_order_api(
     print("********************ABOUT TO BROADCAST*******************")
     print("ROUTE MANAGER:", id(manager))
 
-    await manager.broadcast({
+    await manager.send_personal_message(
+        current_user["username"],
+        {
         "event": "ORDER CREATED",
         "order_id": result["order_id"],
         "product": result["product"],
@@ -69,7 +71,9 @@ async def cancel_order_api(order_id: int, current_user: dict = Depends(get_curre
 
     result = cancel_order(order_id, current_user["username"])
 
-    await manager.broadcast({
+    await manager.send_personal_message(
+        current_user["username"],
+        {
         "event": "ORDER CANCELLED",
         "order_id": result["order_id"]
     })

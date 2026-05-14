@@ -11,9 +11,9 @@ def startup():
     init_db()
     seed_db()
 
-@app.websocket("/ws/orders")
-async def order_ws(websocket: WebSocket):
-    await manager.connect(websocket)
+@app.websocket("/ws/orders/{username}")
+async def order_ws(websocket: WebSocket, username:str):
+    await manager.connect(username, websocket)
     try:
         while True:
             await websocket.receive_text()
