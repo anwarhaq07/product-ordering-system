@@ -18,7 +18,19 @@ async def order_ws(websocket: WebSocket, username:str):
         while True:
             await websocket.receive_text()
     except:
-        manager.disconnect(websocket)
+        manager.disconnect_customer(websocket)
+
+
+@app.websocket("/ws/admin")
+async def admin_ws(websocket: WebSocket):
+
+    await manager.connect_admin(websocket)
+
+    try:
+        while True:
+            await websocket.receive_text()
+    
+    except:
+        manager.disconnect_admin(websocket)
 
 app.include_router(router)
-

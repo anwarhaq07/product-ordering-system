@@ -47,7 +47,14 @@ async def create_order_api(
         "quantity": result["quantity"]
     })
 
-    await manager.broadcast({
+    await manager.broadcast_admin({
+        "event": "NEW ORDER",
+        "customer": current_user["username"],
+        "product": result["product"],
+        "quantity": result["quantity"]
+    })
+
+    await manager.broadcast_admin({
         "event": "STOCK_UPDATED",
         "product_id": result["product_id"],
         "new_stock": result["new_stock"]
