@@ -18,7 +18,7 @@ async def order_ws(websocket: WebSocket, username:str):
         while True:
             await websocket.receive_text()
     except:
-        manager.disconnect_customer(websocket)
+        manager.disconnect_customer(username, websocket)
 
 
 @app.websocket("/ws/admin")
