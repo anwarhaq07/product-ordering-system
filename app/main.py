@@ -16,6 +16,8 @@ async def order_ws(websocket: WebSocket, username:str):
     await manager.connect(username, websocket)
     try:
         while True:
+            data = await websocket.receive_text()
+            print("CLIENT MESSAGE:", data)
             await websocket.receive_text()
     except:
         manager.disconnect_customer(username, websocket)

@@ -1,4 +1,5 @@
 from fastapi import WebSocket
+import asyncio
 
 class ConnectionManager:
     def __init__(self):
@@ -44,26 +45,44 @@ class ConnectionManager:
 
     async def send_personal_message(self, username:str, message: dict):
 
+        tasks = []
         connections = self.active_connections.get(username, [])
+        for connection in connections:
+            tasks.append(
+                connection.send_json(message)
+            )
+        results = await asyncio.gather(
+            *tasks,
+            return_exceptions=True
+        )
 
-        for websocket in connections:
-            try:
-                await websocket.send_json(message)
-            
-            except Exception:
-                pass
+        dead_connections = []
+
+        for connection, result in zip(connections, results):
+            if isinstance(result, Exception):
+                dead_connections.append(connection)
+        for dead_ws in dead_connections:
+            connections.remove(dead_ws)
+            print("Remove dead customer connection")
 
     async def broadcast_admin(self, message:dict):
-        disconnected = []
+        tasks = []
+        connections = list(self.admin_connections)
         
-        for admin_ws in self.admin_connections:
-            try:
-                await admin_ws.send_json(message)
-            except Exception:
-                disconnected.append(admin_ws)
-        
-        for dead_ws in disconnected:
-            self.admin_connections.remove(dead_ws)
-            print("Removed dead admin connection")
+        for connection in connections:
+            
+            tasks.append(
+                connection.send_json(message)
+            )
+        results = await asyncio.gather(
+            *tasks,
+            return_exceptions=True
+        )
+
+        for connection, result in zip(connections, results):
+            if isinstance(result, Exception):
+                self.admin_connections.remove(self.connection)
+
+                print("REMOVED DEAD ADMIN CONNECTION")
 
 manager = ConnectionManager()
