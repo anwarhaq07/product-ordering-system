@@ -3,6 +3,7 @@ from app.routes import router
 from app.database import init_db
 from app.websocket_manager import manager
 from seed import seed_db
+from starlette.websockets import WebSocketDisconnect
 
 app = FastAPI()
 
@@ -18,8 +19,12 @@ async def order_ws(websocket: WebSocket, username:str):
         while True:
             data = await websocket.receive_text()
             print("CLIENT MESSAGE:", data)
-            await websocket.receive_text()
-    except:
+    except WebSocketDisconnect:
+        print("DISCONNECTED:", username)
+        manager.disconnect_customer(username, websocket)
+    
+    except Exception as e:
+        print("WS ERROR:", e)
         manager.disconnect_customer(username, websocket)
 
 

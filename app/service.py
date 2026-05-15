@@ -111,6 +111,13 @@ def create_order(customer_name, product_id, quantity_kg, username, idempotency_k
                 "quantity": quantity_kg
             }
 
+            create_notification(
+                conn,
+                username = username,
+                event_type = "ORDER CREATED",
+                message = f" Order #{response_data['order_id']} created successfully"
+            )
+
             if idempotency_key:
                     cursor.execute("""
                     INSERT INTO idempotency_keys (key, response)
@@ -457,3 +464,12 @@ def login_user(username, password):
         }
     finally:
         conn.close()
+
+def create_notification(conn, username, event_type, message):
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT INTO notification
+    (username, event_type, message)
+    VALUES (?, ?, ?)
+    """,(username, event_type, message))

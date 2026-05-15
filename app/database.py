@@ -24,7 +24,11 @@ def client():
 # -----------------------------
 def get_db_name():
     # IMPORTANT: evaluated at runtime, not import time
-    return "test.db" if os.getenv("TESTING") else Path(__file__).resolve().parent/"meat.db"
+    #return "test.db" if os.getenv("TESTING") else Path(__file__).resolve().parent/"meat.db"
+        db = "test.db" if os.getenv("TESTING") else "meat.db"
+        full_path = Path(__file__).resolve().parent / db
+        print("USING DB:", full_path)
+        return str(full_path)
 
 
 # -----------------------------
@@ -86,6 +90,17 @@ def init_db():
     CREATE TABLE IF NOT EXISTS idempotency_keys(
         key TEXT PRIMARY KEY,
         response TEXT
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS notification(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        message TEXT NOT NULL,
+        is_read INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
 

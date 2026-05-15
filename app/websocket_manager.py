@@ -29,15 +29,18 @@ class ConnectionManager:
         connection = self.active_connections.get(username)
 
         if not connection:
+            print("NO ACTIVE CONNECTION FOR:", username)
             return
+        try:
+            if websocket in connection:
+                connection.remove(websocket)
+            if not connection:
+                del self.active_connections[username]
+                print("DISCONNECTED:", username)
         
-        if websocket in connection:
-            connection.remove(websocket)
+        except Exception as e:
+            print("DISCONNECT ERROR:", e)
         
-        if len(connection) == 0:
-            del self.active_connections[username]
-        
-        print("DISCONNECTED")
 
     def disconnect_admin(self, websocket:WebSocket):
         if websocket in self.admin_connections:
