@@ -41,7 +41,6 @@ class ConnectionManager:
         except Exception as e:
             print("DISCONNECT ERROR:", e)
         
-
     def disconnect_admin(self, websocket:WebSocket):
         if websocket in self.admin_connections:
             self.admin_connections.remove(websocket)

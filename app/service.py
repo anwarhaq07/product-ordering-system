@@ -473,3 +473,4 @@ def create_notification(conn, username, event_type, message):
     (username, event_type, message)
     VALUES (?, ?, ?)
     """,(username, event_type, message))
+
