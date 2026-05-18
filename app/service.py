@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from state_machine import can_transition
 import json
 from app.auth import hash_password, create_access_token, verify_password
+from app.event_service import create_event
 
 def get_all_products():
     conn = get_connection()
@@ -102,20 +103,26 @@ def create_order(customer_name, product_id, quantity_kg, username, idempotency_k
                 (customer_name, product_id, quantity_kg, user["id"])
             )
             order_id = cursor.lastrowid
+            updated_stock = product["stock_kg"] - quantity_kg
             response_data = {
                 "message": "Order created successfully",
                 "order_id": order_id,
                 "product": product["name"],
                 "product_id": product_id,
-                "new_stock": product["stock_kg"] - quantity_kg,
+                "new_stock": updated_stock,
                 "quantity": quantity_kg
             }
 
-            create_notification(
+            create_event(
                 conn,
-                username = username,
-                event_type = "ORDER CREATED",
-                message = f" Order #{response_data['order_id']} created successfully"
+                "ORDER_CREATED",{
+                    "username": username,
+                    "order_id": response_data["order_id"],
+                    "product": product["name"],
+                    "quantity": quantity_kg,
+                    "product_id": product_id,
+                    "new_stock": updated_stock
+                }
             )
 
             if idempotency_key:

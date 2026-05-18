@@ -4,6 +4,7 @@ from app.database import get_connection
 from app.service import get_all_products, create_order, cancel_order, confirm_order, deliver_order, create_user,login_user
 from pydantic import BaseModel
 from app.auth import get_current_user,require_admin
+from app.event_processor import process_event
 from fastapi.security import OAuth2PasswordRequestForm
 
 router = APIRouter()
@@ -46,7 +47,7 @@ async def create_order_api(
         "product": result["product"],
         "quantity": result["quantity"]
     })
-
+    await process_event()
     await manager.broadcast_admin({
         "event": "NEW ORDER",
         "customer": current_user["username"],

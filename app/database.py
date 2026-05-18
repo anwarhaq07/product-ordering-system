@@ -104,5 +104,15 @@ def init_db():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS events(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        processed INTEGER DEFAULT 0,
+        created_at TIMESTAMP DFAULT CURRENT_TIMESTAMP
+    
+    )""")
+
     conn.commit()
     conn.close()
