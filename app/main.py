@@ -4,13 +4,25 @@ from app.database import init_db
 from app.websocket_manager import manager
 from seed import seed_db
 from starlette.websockets import WebSocketDisconnect
+import asyncio
+from contextlib import asynccontextmanager
+from app.event_processor import process_event
 
-app = FastAPI()
+asynccontextmanager
+async def lifespan(app: FastAPI):
 
-@app.on_event("startup")
-def startup():
+    print("STARTING APPLICATION")
+
     init_db()
     seed_db()
+
+    asyncio.create_task(event_worker())
+
+    yield
+
+    print("SHUTING DOWN APPLICATION")
+
+app = FastAPI(lifespan=lifespan)
 
 @app.websocket("/ws/orders/{username}")
 async def order_ws(websocket: WebSocket, username:str):
@@ -41,3 +53,15 @@ async def admin_ws(websocket: WebSocket):
         manager.disconnect_admin(websocket)
 
 app.include_router(router)
+
+async def event_worker():
+
+    while True:
+
+        try:
+            await process_event()
+
+        except Exception as e:
+            print("EVENT WORKER ERROR:", e)
+        
+        await asyncio.sleep(5)

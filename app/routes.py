@@ -47,7 +47,6 @@ async def create_order_api(
         "product": result["product"],
         "quantity": result["quantity"]
     })
-    await process_event()
     await manager.broadcast_admin({
         "event": "NEW ORDER",
         "customer": current_user["username"],
