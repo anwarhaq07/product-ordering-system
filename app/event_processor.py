@@ -11,7 +11,8 @@ async def process_event():
 
     cursor.execute("""
         SELECT * FROM events
-        WHERE processed = 0
+        WHERE status = "PENDING"
+        AND retry_count < 5
         ORDER BY id ASC
         """)
     
@@ -22,7 +23,6 @@ async def process_event():
         try:
             payload = json.loads(event["payload"])
             print("PROCESSING EVENT:", event["event_type"])
-
             if event["event_type"] == "ORDER _CREATED":
 
                 await manager.send_personal_message(
@@ -49,12 +49,28 @@ async def process_event():
             
             cursor.execute("""
                 UPDATE events
-                SET processed = 1
+                SET status = "COMPLETED"
                 WHERE id = ?
                 """, (event["id"], ))
             
+            
         except Exception as e:
             print("EVENT FAILED:", event["id"], e)
+            new_retry_count =  event["retry_count"] + 1
+            status = "DEAD" if new_retry_count >= 5 else "PENDING"
+
+            cursor.execute("""
+                UPDATE events
+                SET retry_count = ?,
+                    last_error = ?,
+                    status = ?
+                WHERE id = ?
+            """, (
+                new_retry_count,
+                str(e),
+                status,
+                event["id"]
+            ))
    
     conn.commit()
     conn.close()

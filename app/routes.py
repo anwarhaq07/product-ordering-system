@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, Depends
+from fastapi import APIRouter, Header, Depends, HTTPException
 from app.websocket_manager import manager
 from app.database import get_connection
 from app.service import get_all_products, create_order, cancel_order, confirm_order, deliver_order, create_user,login_user
@@ -149,3 +149,44 @@ def get_notifications(current_user: dict= Depends(get_current_user)):
     conn.close()
 
     return notification
+
+@router.post("/events/{event_id}/replay")
+async def replay_event(
+    event_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] != "admin":
+        raise HTTPException(
+            status_code = 403,
+            detail = "ADMINS ONLY"
+        )
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT *
+        FROM events
+        WHERE id = ?
+        """, (event_id,) )
+    event = cursor.fetchone()
+
+    if not event:
+        raise HTTPException(
+        status_code = 404,
+        detail = "EVENT NOT FOUND"
+    )
+
+    cursor.execute("""
+        UPDATE events
+        SET status = "PENDING",
+            retry_count = 0,
+            last_error = NULL
+        WHERE id = ?
+    """, (event_id,))
+
+    conn.commit()
+
+    return {
+        "message": "Event replay scheduled",
+        "event_id": event_id
+    }

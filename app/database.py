@@ -110,6 +110,9 @@ def init_db():
         event_type TEXT NOT NULL,
         payload TEXT NOT NULL,
         processed INTEGER DEFAULT 0,
+        retry_count INTEGER DEFAULT 0,
+        last_error TEXT,
+        status TEXT DEFAULT "PENDING",
         created_at TIMESTAMP DFAULT CURRENT_TIMESTAMP
     
     )""")
