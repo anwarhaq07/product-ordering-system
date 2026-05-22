@@ -472,12 +472,27 @@ def login_user(username, password):
     finally:
         conn.close()
 
-def create_notification(conn, username, event_type, message):
+def create_notification(conn, username, event_type, message, event_id):
+    
     cursor = conn.cursor()
 
     cursor.execute("""
+    SELECT id 
+    FROM notification
+    WHERE event_id = ?
+    """, (event_id,))
+    existing = cursor.fetchone()
+
+    if existing:
+        print("NOTIFICATION ALREADY EXISTS")
+        return
+
+    cursor.execute("""
     INSERT INTO notification
-    (username, event_type, message)
-    VALUES (?, ?, ?)
-    """,(username, event_type, message))
+    (username, event_type, message, event_id)
+    VALUES (?, ?, ?, ?)
+    """,(username, event_type, message, event_id))
+
+    conn.commit()
+
 

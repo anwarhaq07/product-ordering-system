@@ -98,6 +98,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL,
         event_type TEXT NOT NULL,
+        event_id INTEGER,
         message TEXT NOT NULL,
         is_read INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

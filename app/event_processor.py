@@ -23,7 +23,7 @@ async def process_event():
         try:
             payload = json.loads(event["payload"])
             print("PROCESSING EVENT:", event["event_type"])
-            if event["event_type"] == "ORDER _CREATED":
+            if event["event_type"] == "ORDER_CREATED":
 
                 await manager.send_personal_message(
                     payload["username"],
@@ -37,8 +37,10 @@ async def process_event():
                     conn = conn,
                     username=payload["username"],
                     event_type = "ORDER_CREATED",
+                    event_id = event["id"],
                     message = f"Order #{payload['order_id']} created successfully"
                 )
+                #raise Exception("CRASH AFTER NOTIFICATION")
 
                 await manager.broadcast_admin({
                     "event": "ORDER_CREATED",
