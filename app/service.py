@@ -248,7 +248,6 @@ def cancel_order(order_id, username):
         "new_stock": updated_stock
     }
 
-
 #Fetch product ID
 def get_product_by_id(product_id):
     conn = get_connection()
@@ -382,7 +381,6 @@ def deliver_order(order_id):
     finally:
         conn.close()
               
-
 def create_user(username, password, role):
 
     conn = get_connection()

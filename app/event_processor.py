@@ -23,8 +23,16 @@ async def process_event():
         try:
             payload = json.loads(event["payload"])
             print("PROCESSING EVENT:", event["event_type"])
-            if event["event_type"] == "ORDER_CREATED":
 
+            cursor.execute("""
+                UPDATE events
+                SET status = 'PROCESSING'
+                WHERE id = ?
+                """, (event["id"],))
+
+            conn.commit()
+            
+            if event["event_type"] == "ORDER_CREATED":
                 await manager.send_personal_message(
                     payload["username"],
                     {
@@ -54,6 +62,7 @@ async def process_event():
                 SET status = "COMPLETED"
                 WHERE id = ?
                 """, (event["id"], ))
+            conn.commit()
             
             
         except Exception as e:
@@ -73,6 +82,7 @@ async def process_event():
                 status,
                 event["id"]
             ))
+            conn.commit()
    
     conn.commit()
     conn.close()

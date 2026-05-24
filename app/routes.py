@@ -104,7 +104,6 @@ def deliver_order_api(order_id: int, current_user: dict = Depends(get_current_us
     require_admin(current_user)
     return deliver_order(order_id)
 
-
 class UserRequest(BaseModel):
     username: str
     password: str
@@ -129,7 +128,6 @@ def login_api(form_data: OAuth2PasswordRequestForm = Depends()):
         form_data.username,
         form_data.password
     )
-
 
 @router.get("/notificaion")
 def get_notifications(current_user: dict= Depends(get_current_user)):
