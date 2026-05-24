@@ -10,6 +10,14 @@ async def process_event():
     cursor = conn.cursor()
 
     cursor.execute("""
+    UPDATE events
+    SET status = 'PENDING'
+    WHERE status = 'PROCESSING'
+    AND processing_started_at < datetime('now', '-5 minutes')
+    """)
+    conn.commit()
+
+    cursor.execute("""
         SELECT * FROM events
         WHERE status = "PENDING"
         AND retry_count < 5
@@ -26,7 +34,8 @@ async def process_event():
 
             cursor.execute("""
                 UPDATE events
-                SET status = 'PROCESSING'
+                SET status = 'PROCESSING',
+                processing_started_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """, (event["id"],))
 

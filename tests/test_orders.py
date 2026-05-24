@@ -53,7 +53,6 @@ def test_invalid_token_rejected(client):
 
     assert response.status_code == 401
 
-
 def test_create_order_success(client):
     register_user(client, "user1", "pass123")
     token = login_user(client, "user1", "pass123")
@@ -109,7 +108,6 @@ def test_cannot_oversell(client):
     )
 
     assert response.status_code == 400
-
 
 def test_cancel_restores_stock(client):
 
@@ -232,7 +230,6 @@ def test_idempotent_concurrent(client):
         t1.join();t2.join()
 
         assert results[0] == results[1]
-
 
 #Test that a user can cancel their own order
 def test_owner_can_cancel_own_order(client):

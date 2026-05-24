@@ -188,3 +188,36 @@ async def replay_event(
         "message": "Event replay scheduled",
         "event_id": event_id
     }
+
+@router.get("/events/stats")
+async def event_stats(
+    current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="ADMINS ONLY"
+        )
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT status, COUNT(*) as count
+        FROM events
+        GROUP BY status
+        """)
+    rows = cursor.fetchall()
+
+    stats = {
+        "PENDING": 0,
+        "PROCESSING": 0,
+        "COMPLETED": 0,
+        "DEAD": 0
+    }
+
+    for row in rows:
+        stats[row["status"]] = row["count"]
+    
+    conn.close()
+    
+    return stats
