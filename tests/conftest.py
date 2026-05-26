@@ -9,6 +9,22 @@ TEST_DB = "test.db"
 
 @pytest.fixture(scope="function")
 def client():
+    os.environ["TESTING"] = "1"
+
+    # wipe test db
+    if os.path.exists("test.db"):
+        os.remove("test.db")
+
+    from app.database import init_db
+    init_db()
+
+    from app.main import app
+    from fastapi.testclient import TestClient
+
+    return TestClient(app)
+
+@pytest.fixture(scope="function")
+def client():
 
     # delete DB completely
     if Path(TEST_DB).exists():

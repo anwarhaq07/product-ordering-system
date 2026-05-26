@@ -1,23 +1,6 @@
 import sqlite3
 import os
-import pytest
 from pathlib import Path
-
-@pytest.fixture(scope="function")
-def client():
-    os.environ["TESTING"] = "1"
-
-    # wipe test db
-    if os.path.exists("test.db"):
-        os.remove("test.db")
-
-    from app.database import init_db
-    init_db()
-
-    from app.main import app
-    from fastapi.testclient import TestClient
-
-    return TestClient(app)
 
 # -----------------------------
 # DB SELECTION (SAFE VERSION)
@@ -25,7 +8,7 @@ def client():
 def get_db_name():
     # IMPORTANT: evaluated at runtime, not import time
     #return "test.db" if os.getenv("TESTING") else Path(__file__).resolve().parent/"meat.db"
-        db = "test.db" if os.getenv("TESTING") else "meat.db"
+        db = "test.db" if os.getenv("TESTING") else "products.db"
         full_path = Path(__file__).resolve().parent / db
         print("USING DB:", full_path)
         return str(full_path)
@@ -41,7 +24,7 @@ def get_connection():
     )
     print("DB FILE:", get_db_name())
     print("CWD:", os.getcwd())
-    print("DB PATH:", os.path.abspath("meat.db"))
+    print("DB PATH:", os.path.abspath("products.db"))
 
     # Enables row["column"] access
     conn.row_factory = sqlite3.Row

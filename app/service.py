@@ -446,7 +446,6 @@ def login_user(username, password):
                 status_code=401,
                 detail="Invalid credentials"
             )
-        
         #Verify Password
         if not verify_password(
             password,

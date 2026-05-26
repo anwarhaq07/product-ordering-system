@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
     init_db()
     seed_db()
 
-    asyncio.create_task(event_worker())
+    #asyncio.create_task(event_worker())
 
     yield
 
@@ -54,14 +54,14 @@ async def admin_ws(websocket: WebSocket):
 
 app.include_router(router)
 
-async def event_worker():
+# async def event_worker():
 
-    while True:
+#     while True:
 
-        try:
-            await process_event()
+#         try:
+#             await process_event()
 
-        except Exception as e:
-            print("EVENT WORKER ERROR:", e)
+#         except Exception as e:
+#             print("EVENT WORKER ERROR:", e)
         
-        await asyncio.sleep(5)
+#         await asyncio.sleep(5)
