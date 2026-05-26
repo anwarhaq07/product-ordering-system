@@ -4,3 +4,4 @@ _pycache_/
 meat.db
 .env
 
+app/products.db
