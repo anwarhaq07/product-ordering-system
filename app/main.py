@@ -15,9 +15,7 @@ async def lifespan(app: FastAPI):
 
     init_db()
     seed_db()
-
-    #asyncio.create_task(event_worker())
-
+    
     yield
 
     print("SHUTING DOWN APPLICATION")
@@ -53,15 +51,3 @@ async def admin_ws(websocket: WebSocket):
         manager.disconnect_admin(websocket)
 
 app.include_router(router)
-
-# async def event_worker():
-
-#     while True:
-
-#         try:
-#             await process_event()
-
-#         except Exception as e:
-#             print("EVENT WORKER ERROR:", e)
-        
-#         await asyncio.sleep(5)

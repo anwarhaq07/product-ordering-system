@@ -2,6 +2,8 @@ import sqlite3
 import os
 from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 # -----------------------------
 # DB SELECTION (SAFE VERSION)
 # -----------------------------
@@ -9,7 +11,7 @@ def get_db_name():
     # IMPORTANT: evaluated at runtime, not import time
     #return "test.db" if os.getenv("TESTING") else Path(__file__).resolve().parent/"meat.db"
         db = "test.db" if os.getenv("TESTING") else "products.db"
-        full_path = Path(__file__).resolve().parent / db
+        full_path = BASE_DIR / db
         print("USING DB:", full_path)
         return str(full_path)
 
@@ -22,12 +24,10 @@ def get_connection():
         get_db_name(),  # FIX: no hardcoded DB
         check_same_thread=False
     )
-    print("DB FILE:", get_db_name())
-    print("CWD:", os.getcwd())
-    print("DB PATH:", os.path.abspath("products.db"))
-
     # Enables row["column"] access
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
+    print("DB FILE:", get_db_name())
     return conn
 
 

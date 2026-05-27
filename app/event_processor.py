@@ -1,14 +1,31 @@
 import json
-
+import asyncio
 from app.database import get_connection
 from app.service import create_notification
 from app.websocket_manager import manager
+
+def recover_stuck_events(conn):
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE events
+        SET status = "PENDING",
+            processing_started_at = NULL
+        WHERE status = "PROCESSING"
+        AND processing_started_at <= datetime('now', '-30 seconds')
+    """)
+
+    recovered_count = cursor.rowcount
+
+    if recovered_count > 0:
+        print(f"RECOVERED {recovered_count} STUCK EVENTS")
+
+    conn.commit() 
 
 async def process_event():
 
     conn = get_connection()
     cursor = conn.cursor()
-
     cursor.execute("""
     UPDATE events
     SET status = 'PENDING'
@@ -16,6 +33,8 @@ async def process_event():
     AND processing_started_at < datetime('now', '-5 minutes')
     """)
     conn.commit()
+
+    recover_stuck_events(conn)
 
     cursor.execute("""
         SELECT * FROM events
@@ -31,14 +50,14 @@ async def process_event():
         try:
             payload = json.loads(event["payload"])
             print("PROCESSING EVENT:", event["event_type"])
-
+            
             cursor.execute("""
                 UPDATE events
                 SET status = 'PROCESSING',
-                processing_started_at = CURRENT_TIMESTAMP
+                    processing_started_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """, (event["id"],))
-
+            await asyncio.sleep(40)
             conn.commit()
             
             if event["event_type"] == "ORDER_CREATED":
@@ -68,7 +87,8 @@ async def process_event():
             
             cursor.execute("""
                 UPDATE events
-                SET status = "COMPLETED"
+                SET status = "COMPLETED",
+                    processing_started_at = NULL
                 WHERE id = ?
                 """, (event["id"], ))
             conn.commit()
@@ -83,7 +103,8 @@ async def process_event():
                 UPDATE events
                 SET retry_count = ?,
                     last_error = ?,
-                    status = ?
+                    status = ?,
+                    processing_started_at = NULL
                 WHERE id = ?
             """, (
                 new_retry_count,
@@ -95,4 +116,6 @@ async def process_event():
    
     conn.commit()
     conn.close()
+
+   
 
