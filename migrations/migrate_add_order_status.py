@@ -1,6 +1,6 @@
 import sqlite3
 
-conn = sqlite3.connect("meat.db")
+conn = sqlite3.connect("products.db")
 cursor =conn.cursor()
 
 # Add order status column

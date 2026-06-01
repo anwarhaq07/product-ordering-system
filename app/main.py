@@ -7,15 +7,16 @@ from starlette.websockets import WebSocketDisconnect
 import asyncio
 from contextlib import asynccontextmanager
 from app.event_processor import process_event
-
+from app.migrations import run_migrations
 asynccontextmanager
 async def lifespan(app: FastAPI):
 
     print("STARTING APPLICATION")
 
     init_db()
+    run_migrations()
     seed_db()
-    
+
     yield
 
     print("SHUTING DOWN APPLICATION")

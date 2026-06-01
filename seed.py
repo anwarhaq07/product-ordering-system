@@ -28,7 +28,7 @@ def seed_db():
     cursor.execute("SELECT * FROM products")
 
     print("CWD:", os.getcwd())
-    print("DB PATH:", os.path.abspath("meat.db"))
+    print("DB PATH:", os.path.abspath("products.db"))
     # rows = cursor.fetchall()
 
     # for row in rows:

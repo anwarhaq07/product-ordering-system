@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -----------------------------
 def get_db_name():
     # IMPORTANT: evaluated at runtime, not import time
-    #return "test.db" if os.getenv("TESTING") else Path(__file__).resolve().parent/"meat.db"
+    #return "test.db" if os.getenv("TESTING") else Path(__file__).resolve().parent/"products.db"
         db = "test.db" if os.getenv("TESTING") else "products.db"
         full_path = BASE_DIR / db
         print("USING DB:", full_path)

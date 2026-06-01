@@ -15,4 +15,4 @@ cursor.execute("""
 conn.commit()
 conn.close()
 
-print("Added proocessing_started_at column")
+print("Added processing_started_at column")
