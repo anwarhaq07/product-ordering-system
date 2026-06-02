@@ -56,9 +56,13 @@ async def process_event():
                 SET status = 'PROCESSING',
                     processing_started_at = CURRENT_TIMESTAMP
                 WHERE id = ?
+                AND status = "PENDING"
                 """, (event["id"],))
             await asyncio.sleep(40)
             conn.commit()
+
+            if cursor.rowcount == 0:
+                continue
             
             if event["event_type"] == "ORDER_CREATED":
                 await manager.send_personal_message(

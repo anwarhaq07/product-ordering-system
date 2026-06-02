@@ -21,7 +21,8 @@ def get_db_name():
 # -----------------------------
 def get_connection():
     conn = sqlite3.connect(
-        get_db_name(),  # FIX: no hardcoded DB
+        get_db_name(),
+        timeout=30,  # FIX: no hardcoded DB
         check_same_thread=False
     )
     # Enables row["column"] access
