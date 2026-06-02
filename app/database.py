@@ -29,6 +29,7 @@ def get_connection():
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
     print("DB FILE:", get_db_name())
+    print("OPENING CONNECTION", id(conn))
     return conn
 
 
@@ -103,4 +104,5 @@ def init_db():
     )""")
 
     conn.commit()
+    print("CLOSING CONNECTION", id(conn))
     conn.close()

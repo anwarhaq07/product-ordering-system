@@ -425,6 +425,7 @@ def create_user(username, password, role):
             }
         
     finally:
+        print("CLOSING CONNECTION", id(conn))
         conn.close()
 
 def login_user(username, password):
