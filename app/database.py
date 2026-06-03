@@ -79,7 +79,7 @@ def init_db():
     """)
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS notification(
+    CREATE TABLE IF NOT EXISTS notifications(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL,
         event_type TEXT NOT NULL,

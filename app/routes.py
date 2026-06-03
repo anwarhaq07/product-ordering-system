@@ -129,22 +129,24 @@ def login_api(form_data: OAuth2PasswordRequestForm = Depends()):
         form_data.password
     )
 
-@router.get("/notificaion")
+@router.get("/notificaions")
 def get_notifications(current_user: dict= Depends(get_current_user)):
     conn = get_connection()
-    cursor = conn.cursor()
+    
+    try:
+        cursor = conn.cursor()
 
-    cursor.execute("""
-    SELECT * FROM notification
-    WHERE username = ?
-    ORDER BY created_at DESC               
-    """, (current_user["username"],))
+        cursor.execute("""
+        SELECT * FROM notifications
+        WHERE username = ?
+        ORDER BY created_at DESC               
+        """, (current_user["username"],))
 
-    notification=[
-        dict(row)
-        for row in cursor.fetchall()
-    ]
-    conn.close()
+        notification=[
+            dict(row)
+            for row in cursor.fetchall()]
+    finally:
+        conn.close()
 
     return notification
 
