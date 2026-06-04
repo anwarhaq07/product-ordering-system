@@ -53,11 +53,11 @@ def create_order(customer_name, product_id, quantity_kg, username, idempotency_k
             if existing:
                 cached = json.loads(existing["response"])
             
-            if "order_id" not in cached:
-                raise HTTPException(
-                status_code=500,
-                detail="Corrupted idempotency cache"
-                )
+                if "order_id" not in cached:
+                    raise HTTPException(
+                    status_code=500,
+                    detail="Corrupted idempotency cache"
+                    )
 
             return cached
         
@@ -80,9 +80,9 @@ def create_order(customer_name, product_id, quantity_kg, username, idempotency_k
             cursor.execute(
                 """
                 UPDATE products
-                SET stock_kg = stock_kg - ?
+                SET reserved_kg = reserved_kg + ?
                 WHERE id = ?
-                AND stock_kg >= ?
+                AND (stock_kg - reserved_kg) >= ?
                 """,
                 (quantity_kg, product_id, quantity_kg))
 
@@ -102,14 +102,26 @@ def create_order(customer_name, product_id, quantity_kg, username, idempotency_k
                 """,
                 (customer_name, product_id, quantity_kg, user["id"])
             )
+            cursor.execute("""
+                SELECT
+                    stock_kg,
+                    reserved_kg,
+                    name
+                FROM products
+                WHERE id = ?
+                """, (product_id,))
+            product = cursor.fetchone()
+
             order_id = cursor.lastrowid
-            updated_stock = product["stock_kg"] - quantity_kg
+            available_kg = product["stock_kg"] - product["reserved_kg"]
             response_data = {
                 "message": "Order created successfully",
                 "order_id": order_id,
                 "product": product["name"],
                 "product_id": product_id,
-                "new_stock": updated_stock,
+                "stock_kg": product["stock_kg"],
+                "reserved_kg": product["reserved_kg"],
+                "available_kg": available_kg,
                 "quantity": quantity_kg
             }
 
@@ -121,7 +133,8 @@ def create_order(customer_name, product_id, quantity_kg, username, idempotency_k
                     "product": product["name"],
                     "quantity": quantity_kg,
                     "product_id": product_id,
-                    "new_stock": updated_stock
+                    "available_kg": available_kg,
+                    "reserved_kg": product["reserved_kg"]   
                 }
             )
 

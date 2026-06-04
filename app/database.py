@@ -55,6 +55,7 @@ def init_db():
         name TEXT NOT NULL,
         price_per_kg REAL NOT NULL,
         stock_kg REAL NOT NULL DEFAULT 0,
+        reserved_kg REAL NOT NULL DEFAULT 0,
         available INTEGER DEFAULT 1
     )
     """)
@@ -102,6 +103,16 @@ def init_db():
         created_at TIMESTAMP DFAULT CURRENT_TIMESTAMP
     
     )""")
+
+    cursor.execute("PRAGMA table_info(products)")
+    columns = [row[1] for row in cursor.fetchall()]
+
+    if "reserved_kg" not in columns:
+         cursor.execute("""
+            ALTER TABLE products
+            ADD COLUMN reserved_kg REAL NOT NULL DEFAULT 0
+        """)
+    print("Added reserved_kg column")
 
     conn.commit()
     print("CLOSING CONNECTION", id(conn))

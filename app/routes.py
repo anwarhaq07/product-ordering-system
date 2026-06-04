@@ -57,7 +57,9 @@ async def create_order_api(
     await manager.broadcast_admin({
         "event": "STOCK_UPDATED",
         "product_id": result["product_id"],
-        "new_stock": result["new_stock"]
+        "stock_kg": result["stock_kg"],
+        "reserved_kg": result["reserved_kg"],
+        "available_kg": result["available_kg"]
     })
     return result
 
