@@ -90,7 +90,7 @@ async def cancel_order_api(order_id: int, current_user: dict = Depends(get_curre
     await manager.broadcast_admin({
         "event": "STOCK_UPDATED",
         "product": result["product_id"],
-        "new_stock": result["new_stock"]
+        "available_kg": result["available_kg"]
     })
 
     return result
