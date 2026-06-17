@@ -3,7 +3,7 @@ name: Product Ordering CI
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
 
 jobs:
