@@ -239,18 +239,20 @@ def cancel_order(order_id, username):
         product = cursor.fetchone()
         available_kg = product["stock_kg"] - product["reserved_kg"]
 
-        cancel_event = {
-        "event": "ORDER_CANCELLED",
-        "order_id": order_id
-        }
 
-        stock_event = {
-            "event": "STOCK_UPDATED",
-            "product_id": order["product_id"],
-            "stock_kg": product["stock_kg"],
-            "reserved_kg": product["reserved_kg"],
-            "available_kg": available_kg
-        }
+############TODO######################
+        # cancel_event = {
+        # "event": "ORDER_CANCELLED",
+        # "order_id": order_id
+        # }
+
+        # stock_event = {
+        #     "event": "STOCK_UPDATED",
+        #     "product_id": order["product_id"],
+        #     "stock_kg": product["stock_kg"],
+        #     "reserved_kg": product["reserved_kg"],
+        #     "available_kg": available_kg
+        # }
 
         conn.commit()
 
