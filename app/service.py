@@ -204,13 +204,23 @@ def cancel_order(order_id, username):
                 status_code=400,
                 detail=f"Cannot cancel order in {order['status']} state"
             )
-
-        #Restore stocks
+        
         cursor.execute("""
-            UPDATE products
-            SET stock_kg = stock_kg + ?
-            WHERE id = ?
-        """, (order["quantity_kg"], order["product_id"]))
+        UPDATE products
+        SET reserved_kg = reserved_kg - ?
+        WHERE id = ?
+        AND reserved_kg >= ?
+        """, (
+            order["quantity_kg"],
+            order["product_id"],
+            order["quantity_kg"]
+        ))
+
+        if cursor.rowcount == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid inventory reservation"
+            )
 
         #Mark order cancelled
         cursor.execute("""
@@ -221,13 +231,13 @@ def cancel_order(order_id, username):
 
         #fetch Updated socks
         cursor.execute("""
-            SELECT stock_kg
+            SELECT stock_kg, reserved_kg
             FROM products
             WHERE id =?
         """, (order["product_id"],))
 
         product = cursor.fetchone()
-        updated_stock = product["stock_kg"]
+        available_kg = product["stock_kg"] - product["reserved_kg"]
 
         cancel_event = {
         "event": "ORDER_CANCELLED",
@@ -237,7 +247,9 @@ def cancel_order(order_id, username):
         stock_event = {
             "event": "STOCK_UPDATED",
             "product_id": order["product_id"],
-            "new_stock": updated_stock
+            "stock_kg": product["stock_kg"],
+            "reserved_kg": product["reserved_kg"],
+            "available_kg": available_kg
         }
 
         conn.commit()
@@ -258,7 +270,9 @@ def cancel_order(order_id, username):
         "message": "Order cancelled successfully",
         "order_id": order_id,
         "product_id": order["product_id"],
-        "new_stock": updated_stock
+        "stock_kg": product["stock_kg"],
+        "reserved_kg": product["reserved_kg"],
+        "available_kg": available_kg
     }
 
 #Fetch product ID
@@ -309,7 +323,24 @@ def confirm_order(order_id):
                     status_code=400,
                     detail=f"Cannot confirm order in {order['status']} state"
                 )
-            
+            cursor.execute("""
+            UPDATE products
+            SET stock_kg = stock_kg - ?,
+                reserved_kg = reserved_kg - ?
+            WHERE id = ?
+            AND reserved_kg >= ?
+            """, (
+                order["quantity_kg"],
+                order["quantity_kg"],
+                order["product_id"],
+                order["quantity_kg"]
+            ))
+
+            if cursor.rowcount == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Insufficient reserved inventory"
+                )            
             #Update status
             cursor.execute(
                 """
